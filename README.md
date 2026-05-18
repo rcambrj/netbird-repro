@@ -20,6 +20,8 @@ In this scenario:
 
 and reinforced that by linking to this documentation upon seeing the [bug report](https://github.com/netbirdio/netbird/issues/5273).
 
+Note: at the time of writing, the `netbird` package can be upgraded to the latest version without breaking this test, the `netbird-management` version is the one which seems to dictate whether this test passes or fails.
+
 ## To run this test
 
 * install nix
