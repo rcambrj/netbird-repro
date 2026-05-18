@@ -10,33 +10,27 @@ let
   vlan = {
     lan1 = 1;
     wan = 2;
-    lan2 = 3;
   };
   ip = {
     # beware: 10.0.2.0/24 used by the runNixOSTest on eth0
 
     # cidrs
-    lan1-cidr     = "10.0.3.0/24"; # represents the LAN on one end (machine1 & machine2)
-    wan-cidr      = "10.0.4.0/24"; # represents the Internet
-    lan2-cidr     = "10.0.5.0/24"; # represents the LAN on the other end (machine3 & machine4)
-    netbird-cidr  = "100.0.0.0/24";
+    lan1-cidr     = "10.0.3.0/24"; # represents a LAN (machine1 & machine2)
+    wan-cidr      = "10.0.4.0/24"; # represents the Internet (machine2 & machine3)
+    netbird-cidr  = "100.0.0.0/24"; # represents the Netbird VPN (machine2 & machine3)
 
     # lan1
-    machine1-lan1 = "10.0.3.1"; # represents a server behind NAT
-    machine2-lan1 = "10.0.3.2"; # represents a NAT router (lan1 end, lan side)
+    machine1-lan1 = "10.0.3.1"; # represents a machine with no netbird agent
+    machine2-lan1 = "10.0.3.2"; # represents a router with IP forwarding (LAN side)
 
     # wan
-    machine2-wan  = "10.0.4.2";  # represents a NAT router (lan1 end, wan side)
+    machine2-wan  = "10.0.4.2"; # represents a router with IP forwarding (WAN side)
     server-wan    = "10.0.4.10"; # represents the netbird.io Internet service
-    machine3-wan  = "10.0.4.3";  # represents a NAT router (lan2 end, wan side)
-
-    # lan2
-    machine3-lan2 = "10.0.5.3"; # represents a NAT router (lan2 end, lan side)
-    machine4-lan2 = "10.0.5.4"; # represents a server behind NAT (in DMZ)
+    machine3-wan  = "10.0.4.3"; # represents a machine with a netbird agent
 
     # netbird VPN
-    machine2-nb   = "100.0.0.2"; # represents a NAT router (netbird side)
-    machine4-nb   = "100.0.0.3"; # represents a server on the Internet
+    machine2-nb   = "100.0.0.2"; # represents a router with IP forwarding (netbird side)
+    machine3-nb   = "100.0.0.3"; # represents a machine with a netbird agent
   };
 in pkgs.testers.runNixOSTest {
   name = "netbird-repro";
@@ -45,7 +39,6 @@ in pkgs.testers.runNixOSTest {
     ip = {
       'lan1_cidr': "${ip.lan1-cidr}",
       'wan_cidr': "${ip.wan-cidr}",
-      'lan2_cidr': "${ip.lan2-cidr}",
 
       'machine1_lan1': "${ip.machine1-lan1}",
       'machine2_lan1': "${ip.machine2-lan1}",
@@ -54,12 +47,9 @@ in pkgs.testers.runNixOSTest {
       'server_wan': "${ip.server-wan}",
       'machine3_wan': "${ip.machine3-wan}",
 
-      'machine3_lan2': "${ip.machine3-lan2}",
-      'machine4_lan2': "${ip.machine4-lan2}",
-
       'netbird_cidr': "${ip.netbird-cidr}",
       'machine2_nb': "${ip.machine2-nb}",
-      'machine4_nb': "${ip.machine4-nb}",
+      'machine3_nb': "${ip.machine3-nb}",
     }
 
     ${builtins.readFile ./test-script.py}
@@ -198,41 +188,40 @@ in pkgs.testers.runNixOSTest {
       };
     });
 
-    machine3 = { config, pkgs, ... }: (recursiveUpdate (debug 22223) {
-      environment.systemPackages = with pkgs; [ nftables tcpdump ];
-      virtualisation.interfaces = {
-        "enp1s0".vlan = vlan.lan2;
-        "enp2s0".vlan = vlan.wan;
-      };
-      networking.useNetworkd = true;
-      networking.interfaces = {
-        "enp1s0".ipv4.addresses = [{ address = ip.machine3-lan2; prefixLength = 24; }];
-        "enp2s0".ipv4.addresses = [{ address = ip.machine3-wan; prefixLength = 24; }];
-      };
-      networking.nftables.enable = true;
-      networking.nat = {
-        enable = true;
-        internalInterfaces = ["enp1s0"];
-        externalInterface = "enp2s0";
-        dmzHost = ip.machine4-lan2;
-        # forwardPorts = [{
-        #   destination = "${ip.machine4-lan2}:${toString netbirdPort}";
-        #   proto = "udp";
-        #   sourcePort = netbirdPort;
-        # }];
-      };
-    });
+    # machine3 = { config, pkgs, ... }: (recursiveUpdate (debug 22223) {
+    #   environment.systemPackages = with pkgs; [ nftables tcpdump ];
+    #   virtualisation.interfaces = {
+    #     "enp1s0".vlan = vlan.lan2;
+    #     "enp2s0".vlan = vlan.wan;
+    #   };
+    #   networking.useNetworkd = true;
+    #   networking.interfaces = {
+    #     "enp1s0".ipv4.addresses = [{ address = ip.machine3-lan2; prefixLength = 24; }];
+    #     "enp2s0".ipv4.addresses = [{ address = ip.machine3-wan; prefixLength = 24; }];
+    #   };
+    #   networking.nftables.enable = true;
+    #   networking.nat = {
+    #     enable = true;
+    #     internalInterfaces = ["enp1s0"];
+    #     externalInterface = "enp2s0";
+    #     dmzHost = ip.machine4-lan2;
+    #     # forwardPorts = [{
+    #     #   destination = "${ip.machine4-lan2}:${toString netbirdPort}";
+    #     #   proto = "udp";
+    #     #   sourcePort = netbirdPort;
+    #     # }];
+    #   };
+    # });
 
-    machine4 = { config, pkgs, ... }: (recursiveUpdate (debug 22224) {
+    machine3 = { config, pkgs, ... }: (recursiveUpdate (debug 22224) {
       environment.systemPackages = with pkgs; [ tcpdump ];
       virtualisation.interfaces = {
-        "enp1s0".vlan = vlan.lan2;
+        "enp1s0".vlan = vlan.wan;
       };
       networking.useNetworkd = true;
       networking.interfaces = {
         "enp1s0".ipv4 = {
-          addresses = [{ address = ip.machine4-lan2; prefixLength = 24; }];
-          routes = [{ address = "0.0.0.0"; prefixLength = 0; via = ip.machine3-lan2; }];
+          addresses = [{ address = ip.machine3-wan; prefixLength = 24; }];
         };
       };
       services.netbird = {

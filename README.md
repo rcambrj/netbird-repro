@@ -6,8 +6,7 @@ This repository reproduces a bug* in netbird where some machines cannot talk to 
 flowchart TD
     A[machine1] --- B[machine2]
     B ---|Internet| C[machine3]
-    C --- D[machine4]
-    B ---|Netbird| D
+    B ---|Netbird| C
 ```
 
 In this scenario:

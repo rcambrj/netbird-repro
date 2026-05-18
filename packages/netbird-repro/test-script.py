@@ -11,13 +11,13 @@ server.wait_for_unit("netbird-management.service")
 server.wait_for_unit("netbird-signal.service")
 server.wait_for_unit("coturn.service")
 
-# machine1 can ping machine4's router (machine3)
+# machine1 can ping machine3
 machine1.wait_until_succeeds(f"ping -c1 -W1 {ip['machine3_wan']}", 10)
-# machine4 can ping machine1's router (machine2)
-machine4.wait_until_succeeds(f"ping -c1 -W1 {ip['machine2_wan']}", 10)
+# machine3 can ping machine1's router (machine2)
+machine3.wait_until_succeeds(f"ping -c1 -W1 {ip['machine2_wan']}", 10)
 # both can ping server
 machine1.wait_until_succeeds(f"ping -c1 -W1 {ip['server_wan']}", 10)
-machine4.wait_until_succeeds(f"ping -c1 -W1 {ip['server_wan']}", 10)
+machine3.wait_until_succeeds(f"ping -c1 -W1 {ip['server_wan']}", 10)
 
 jwks = server.succeed("echo -n $(cat /var/lib/fake-idp/jwks.json)")
 print(f"Got JWKs: {jwks}")
@@ -69,17 +69,17 @@ print(f"Setup Key Secret: {setup_key_secret}")
 
 # netbird errors if it's already up
 machine2.succeed("netbird-default down")
-machine4.succeed("netbird-default down")
+machine3.succeed("netbird-default down")
 time.sleep(5)
 
 # Configure and start peers with the setup key
 # fails after ~30s. use a suitable timeout to get useful logs.
 machine2.succeed(f"netbird-default up --setup-key {setup_key_secret} --management-url http://{ip['server_wan']}:8011", timeout=60)
-machine4.succeed(f"netbird-default up --setup-key {setup_key_secret} --management-url http://{ip['server_wan']}:8011", timeout=60)
+machine3.succeed(f"netbird-default up --setup-key {setup_key_secret} --management-url http://{ip['server_wan']}:8011", timeout=60)
 
 # Wait for peers to connect
 machine2.wait_until_succeeds("netbird-default status | grep -q 'Peers count: 1'", 10)
-machine4.wait_until_succeeds("netbird-default status | grep -q 'Peers count: 1'", 10)
+machine3.wait_until_succeeds("netbird-default status | grep -q 'Peers count: 1'", 10)
 
 # Configure predictable netbird IPs for peers
 netbird_peers = json.loads(server.succeed(" ".join([
@@ -90,10 +90,10 @@ netbird_peers = json.loads(server.succeed(" ".join([
 print(f"Netbird Peers: {netbird_peers}")
 
 netbird_machine2 = [peer for peer in netbird_peers if peer['hostname'] == "machine2"][0]
-netbird_machine4 = [peer for peer in netbird_peers if peer['hostname'] == "machine4"][0]
+netbird_machine3 = [peer for peer in netbird_peers if peer['hostname'] == "machine3"][0]
 
 netbird_machine2['ip'] = ip['machine2_nb']
-netbird_machine4['ip'] = ip['machine4_nb']
+netbird_machine3['ip'] = ip['machine3_nb']
 
 body = json.dumps(netbird_machine2)
 server.succeed(" ".join([
@@ -102,9 +102,9 @@ server.succeed(" ".join([
     f"-H 'Authorization: Bearer {token}'",
     f"-d '{body}'",
 ]))
-body = json.dumps(netbird_machine4)
+body = json.dumps(netbird_machine3)
 server.succeed(" ".join([
-	f"curl -s --fail-with-body -X PUT http://localhost:8011/api/peers/{netbird_machine4['id']}",
+	f"curl -s --fail-with-body -X PUT http://localhost:8011/api/peers/{netbird_machine3['id']}",
     "-H 'Content-Type: application/json'",
     f"-H 'Authorization: Bearer {token}'",
     f"-d '{body}'",
@@ -112,13 +112,13 @@ server.succeed(" ".join([
 
 # Restart netbird clients to refresh netbird IPs
 machine2.succeed("systemctl restart netbird-default")
-machine4.succeed("systemctl restart netbird-default")
+machine3.succeed("systemctl restart netbird-default")
 
 # Both netbird peers can ping each other
-machine2.wait_until_succeeds(f"ping -c1 -W1 {ip['machine4_nb']}", 10)
-machine4.wait_until_succeeds(f"ping -c1 -W1 {ip['machine2_nb']}", 10)
+machine2.wait_until_succeeds(f"ping -c1 -W1 {ip['machine3_nb']}", 10)
+machine3.wait_until_succeeds(f"ping -c1 -W1 {ip['machine2_nb']}", 10)
 
-# Add a route allowing machine2 to route traffic between machine1 & machine4
+# Add a route allowing machine2 to route traffic between machine1 & machine3
 # 1/3 Create a Network
 body = json.dumps({
 	'name': "lan-network",
@@ -167,6 +167,8 @@ print(f"Network: {network_router}")
 # Wait for the network to propagate to machine2
 machine2.wait_until_succeeds(f"netbird-default status | grep -q 'Networks: {ip['lan1_cidr']}'", 10)
 
-# Peers machine1 and machine4 can ping each other via netbird "Network Route"
-machine4.wait_until_succeeds(f"ping -c1 -W1 {ip['machine1_lan1']}", 10)
-machine1.wait_until_succeeds(f"ping -c1 -W1 {ip['machine4_nb']}", 10)
+# Peers machine1 and machine3 can ping each other via netbird "Network Route"
+# This one normally succeeds
+machine3.wait_until_succeeds(f"ping -c1 -W1 {ip['machine1_lan1']}", 10)
+# This one succeeds only on networks using netbird-management <=0.59.10
+machine1.wait_until_succeeds(f"ping -c1 -W1 {ip['machine3_nb']}", 10)
