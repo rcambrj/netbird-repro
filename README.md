@@ -11,8 +11,8 @@ flowchart TD
 
 In this scenario:
 
-* sending an ICMP echo from `machine1` to `machine4` over the netbird network arrives, but `machine4` does not reply.
-* sending an ICMP echo from `machine4` to `machine1` over the netbird network arrives and the reply does also.
+* ✅ sending an ICMP echo from `machine4` over the netbird network to `machine1` arrives and the reply does also.
+* ❌ sending an ICMP echo from `machine1` over the netbird network to `machine4` arrives, but `machine4` does not reply.
 
 \* the netbird team have [documented](https://docs.netbird.io/manage/networks/use-cases/site-to-vpn) that:
  
