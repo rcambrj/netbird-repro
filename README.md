@@ -25,8 +25,10 @@ and reinforced that by linking to this documentation upon seeing the [bug report
 * install nix
 * `git clone ...`
 * `nix build -L .#packages.aarch64-darwin.netbird-repro`
+* `nix build -L .#packages.aarch64-darwin.netbird-repro-working`
+* `nix build -L .#packages.aarch64-darwin.netbird-repro-broken`
 
-Change the netbird version being used by commenting/uncommenting the right line at the top of `packages/netbird-repro/default.nix`
+`netbird-repro` uses the default `nixpkgs` packages. The `netbird-repro-working` and `netbird-repro-broken` wrappers inject pinned `netbird` and `netbird-management` packages from the corresponding flake inputs.
 
 ## Legal
 

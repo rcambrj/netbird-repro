@@ -1,12 +1,10 @@
-{ inputs, pkgs, ... }:
+{ pkgs
+, netbirdPackage ? pkgs: pkgs.netbird
+, netbirdManagementPackage ? pkgs: pkgs.netbird-management
+, ...
+}:
 with pkgs.lib;
 let
-  # netbird-package-name = "netbird-working";
-  # netbird-management-package-name = "netbird-management-working";
-
-  netbird-package-name = "netbird-broken";
-  netbird-management-package-name = "netbird-management-broken";
-
   vlan = {
     lan1 = 1;
     wan = 2;
@@ -107,7 +105,7 @@ in pkgs.testers.runNixOSTest {
         domain = "netbird.selfhosted";
         management = {
           enable = true;
-          package = pkgs."${netbird-management-package-name}";
+          package = netbirdManagementPackage pkgs;
           domain = ip.server-wan;
           port = 8011;
           extraOptions = ["--disable-geolite-update" "--disable-anonymous-metrics"];
@@ -179,7 +177,7 @@ in pkgs.testers.runNixOSTest {
         externalInterface = "enp2s0";
       };
       services.netbird = {
-        package = pkgs."${netbird-package-name}";
+        package = netbirdPackage pkgs;
         clients.default = {
           hardened = false;
           port = netbirdPort;
@@ -225,7 +223,7 @@ in pkgs.testers.runNixOSTest {
         };
       };
       services.netbird = {
-        package = pkgs."${netbird-package-name}";
+        package = netbirdPackage pkgs;
         clients.default = {
           hardened = false;
           port = netbirdPort;
