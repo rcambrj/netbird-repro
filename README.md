@@ -15,10 +15,24 @@ In this scenario:
 * ❌ sending an ICMP echo from `machine1` over the netbird network to `machine4` arrives, but `machine4` does not reply.
 
 \* the netbird team have [documented](https://docs.netbird.io/manage/networks/use-cases/site-to-vpn) that:
- 
+  
 > The routing peer must perform outbound source NAT for site traffic entering the NetBird overlay.
 
 and reinforced that by linking to this documentation upon seeing the [bug report](https://github.com/netbirdio/netbird/issues/5273).
+
+## Why SNAT/masquerade is undesirable
+
+When the routing peer performs SNAT (masquerade) on all traffic entering the NetBird overlay, the source IP is rewritten to the routing peer's own NetBird address. This makes site-to-VPN connectivity work, but at the cost of hiding the real source IP of every host behind the routing peer.
+
+This is problematic for distributed systems that require bidirectional node identity. For example:
+
+* **Kubernetes** — kubelets and the control plane rely on the source IP of incoming connections to identify which node a request originated from. SNAT makes every node behind a routing peer appear as the same IP, breaking `NodePort`+`externalTrafficPolicy: Local`, kubelet authentication, and cluster health monitoring.
+
+* **GlusterFS** — each brick maintains a peer list by IP address. When a mount client reconnects, the bricks check the source IP against their peer list. If the source has been rewritten by SNAT, the bricks cannot associate the connection with the correct peer, causing mount failures and split-brain conditions.
+
+* **Any clustered protocol that uses mutual authentication by IP** — etcd, Consul, Cassandra, and similar systems all expect to see the originating node's real address in both directions of a connection. SNAT breaks this by making all traffic from behind a routing peer indistinguishable.
+
+The correct fix would allow the NetBird policy engine to accept and forward traffic from non-peer source IPs that belong to advertised network routes, rather than requiring SNAT to disguise them as known peers.
 
 Note: at the time of writing, the `netbird` package can be upgraded to the latest version without breaking this test, the `netbird-management` version is the one which seems to dictate whether this test passes or fails.
 
