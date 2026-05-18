@@ -29,8 +29,25 @@ Note: at the time of writing, the `netbird` package can be upgraded to the lates
 * `nix build -L .#packages.aarch64-darwin.netbird-repro`
 * `nix build -L .#packages.aarch64-darwin.netbird-repro-working`
 * `nix build -L .#packages.aarch64-darwin.netbird-repro-broken`
+* `nix build -L .#packages.aarch64-darwin.netbird-repro-dev`
 
 `netbird-repro` uses the default `nixpkgs` packages. The `netbird-repro-working` and `netbird-repro-broken` wrappers inject pinned `netbird` and `netbird-management` packages from the corresponding flake inputs.
+
+## Repro targets
+
+`netbird-repro` uses the current default `nixpkgs` packages and follows whichever NetBird version is available there.
+
+`netbird-repro-working` is a control case pinned to a known-working nixpkgs revision. It should pass, and should not be changed while developing a NetBird patch.
+
+`netbird-repro-broken` is a control case pinned to a known-broken nixpkgs revision. It should fail at the repro assertion, and should not be changed while developing a NetBird patch.
+
+`netbird-repro-dev` is the patch development target. It builds NetBird from the local package definitions in this repository and is the only repro target intended for local NetBird source patches.
+
+While iterating on a fix, add local `netbird-management` patches to `netbirdManagementPatches` in `packages/netbird-repro-dev.nix`, then run:
+
+```sh
+nix build -L .#packages.aarch64-darwin.netbird-repro-dev
+```
 
 ## Legal
 

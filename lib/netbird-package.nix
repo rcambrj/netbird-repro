@@ -22,6 +22,7 @@
 , vendorHash
 , componentName ? "client"
 , needsUpdateScript ? componentName == "client"
+, patches ? []
 }:
 let
   /*
@@ -70,7 +71,7 @@ let
 in
 buildGoModule (finalAttrs: {
   pname = "netbird-${componentName}";
-  inherit version vendorHash;
+  inherit version vendorHash patches;
 
   src = fetchFromGitHub {
     owner = "netbirdio";
