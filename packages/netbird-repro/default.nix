@@ -91,6 +91,7 @@ in pkgs.testers.runNixOSTest {
         enable = true;
         root = "/var/lib/fake-idp";
       };
+      systemd.services.static-web-server.environment.SERVER_IGNORE_HIDDEN_FILES = "false";
       systemd.services.fake-idp = {
         requiredBy = ["netbird-management.service"];
         before = ["netbird-management.service"];
