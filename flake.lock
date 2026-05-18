@@ -37,7 +37,23 @@
         "type": "github"
       }
     },
-    "nixpkgs-netbird-0-59-5": {
+    "nixpkgs-netbird-broken": {
+      "locked": {
+        "lastModified": 1778794387,
+        "narHash": "sha256-BL04pOS9453Awkeb9f90XBJXBSkWxN+vB7HIgnL0iMM=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "8a1b0127302ea51e05bf4ea5a291743fac442406",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "8a1b0127302ea51e05bf4ea5a291743fac442406",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs-netbird-working": {
       "locked": {
         "lastModified": 1761059551,
         "narHash": "sha256-ro3FQvF/zv37BS+s3K0DhA+9Dtnbb65pHTJ4G8t+Sns=",
@@ -53,28 +69,12 @@
         "type": "github"
       }
     },
-    "nixpkgs-netbird-0-59-7": {
-      "locked": {
-        "lastModified": 1761059565,
-        "narHash": "sha256-PgTIZc7Y/hhrjCV9gj6wdcXvPFGEqg0rAeo0BAC54y0=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "0cbfca7acd0bac87c34bb184130e4542c27da52c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "0cbfca7acd0bac87c34bb184130e4542c27da52c",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "blueprint": "blueprint",
         "nixpkgs": "nixpkgs",
-        "nixpkgs-netbird-0-59-5": "nixpkgs-netbird-0-59-5",
-        "nixpkgs-netbird-0-59-7": "nixpkgs-netbird-0-59-7"
+        "nixpkgs-netbird-broken": "nixpkgs-netbird-broken",
+        "nixpkgs-netbird-working": "nixpkgs-netbird-working"
       }
     },
     "systems": {

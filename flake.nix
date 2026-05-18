@@ -7,11 +7,8 @@
     blueprint.url = "github:numtide/blueprint";
     blueprint.inputs.nixpkgs.follows = "nixpkgs";
 
-    # netbird is broken as of https://github.com/NixOS/nixpkgs/pull/453040
-    # breaking commit
-    nixpkgs-netbird-0-59-7.url = "github:NixOS/nixpkgs?ref=0cbfca7acd0bac87c34bb184130e4542c27da52c";
-    # parent (working)
-    nixpkgs-netbird-0-59-5.url = "github:NixOS/nixpkgs?ref=26afda1803886eab9161182bf169e6e43f3f6aed";
+    nixpkgs-netbird-working.url = "github:NixOS/nixpkgs?ref=26afda1803886eab9161182bf169e6e43f3f6aed";
+    nixpkgs-netbird-broken.url = "github:NixOS/nixpkgs?ref=8a1b0127302ea51e05bf4ea5a291743fac442406";
   };
 
   # Load the blueprint
@@ -19,8 +16,11 @@
     inherit inputs;
     nixpkgs.overlays = [
       (final: prev: {
-        netbird-0-59-5 = inputs.nixpkgs-netbird-0-59-5.legacyPackages.${final.system}.netbird;
-        netbird-0-59-7 = inputs.nixpkgs-netbird-0-59-7.legacyPackages.${final.system}.netbird;
+        netbird-working = inputs.nixpkgs-netbird-working.legacyPackages.${final.system}.netbird;
+        netbird-broken = inputs.nixpkgs-netbird-broken.legacyPackages.${final.system}.netbird;
+
+        netbird-management-working = inputs.nixpkgs-netbird-working.legacyPackages.${final.system}.netbird-management;
+        netbird-management-broken = inputs.nixpkgs-netbird-broken.legacyPackages.${final.system}.netbird-management;
       })
     ];
   };

@@ -1,9 +1,11 @@
 { inputs, pkgs, ... }:
 with pkgs.lib;
 let
-  # netbird-package-name = "netbird-0-59-5";
-  netbird-package-name = "netbird-0-59-7";
-  # TODO: I've narrowed down the breakage down to a single commit, see packages/netbird.nix
+  # netbird-package-name = "netbird-working";
+  # netbird-management-package-name = "netbird-management-working";
+
+  netbird-package-name = "netbird-broken";
+  netbird-management-package-name = "netbird-management-broken";
 
   vlan = {
     lan1 = 1;
@@ -81,9 +83,6 @@ in pkgs.testers.runNixOSTest {
     };
   in {
     server = { config, pkgs, ... }: (recursiveUpdate (debug 22220) {
-      environment.systemPackages = with pkgs; [
-        netbird-management
-      ];
       virtualisation.interfaces = {
         "enp1s0".vlan = vlan.wan;
       };
@@ -118,6 +117,7 @@ in pkgs.testers.runNixOSTest {
         domain = "netbird.selfhosted";
         management = {
           enable = true;
+          package = pkgs."${netbird-management-package-name}";
           domain = ip.server-wan;
           port = 8011;
           extraOptions = ["--disable-geolite-update" "--disable-anonymous-metrics"];
