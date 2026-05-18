@@ -1,0 +1,117 @@
+diff --git a/client/firewall/nftables/acl_linux.go b/client/firewall/nftables/acl_linux.go
+index 9d2ea72..8aae160 100644
+--- a/client/firewall/nftables/acl_linux.go
++++ b/client/firewall/nftables/acl_linux.go
+@@ -4,6 +4,7 @@ import (
+ 	"bytes"
+ 	"fmt"
+ 	"net"
++	"net/netip"
+ 	"slices"
+ 	"strconv"
+ 	"strings"
+@@ -40,6 +41,8 @@ type AclManager struct {
+ 	routingFwChainName string
+ 	af                 addrFamily
+ 
++	routeInputRules map[string]*nftables.Rule
++
+ 	workTable       *nftables.Table
+ 	chainInputRules *nftables.Chain
+ 	chainPrerouting *nftables.Chain
+@@ -67,6 +70,7 @@ func newAclManager(table *nftables.Table, wgIface iFaceMapper, routingFwChainNam
+ 		af:                 familyForAddr(table.Family == nftables.TableFamilyIPv4),
+ 
+ 		ipsetStore: newIpsetStore(),
++		routeInputRules: make(map[string]*nftables.Rule),
+ 		rules:      make(map[string]*Rule),
+ 	}, nil
+ }
+@@ -209,6 +213,87 @@ func (m *AclManager) createDefaultAllowRules() error {
+ 	return nil
+ }
+ 
++// AddRouteInputRule adds an ACCEPT rule for traffic from the given network prefix
++// in the netbird-acl-input-rules chain. This allows non-masqueraded site-to-VPN
++// traffic to reach local services on this peer.
++func (m *AclManager) AddRouteInputRule(prefix netip.Prefix) error {
++	key := prefix.String()
++	if _, exists := m.routeInputRules[key]; exists {
++		return nil
++	}
++
++	prefix = prefix.Masked()
++
++	var mask []byte
++	var addr []byte
++	if prefix.Addr().Is4() {
++		mask = net.CIDRMask(prefix.Bits(), 32)
++		addr = prefix.Addr().AsSlice()
++	} else {
++		mask = net.CIDRMask(prefix.Bits(), 128)
++		addr = prefix.Addr().AsSlice()
++	}
++	for i := range addr {
++		addr[i] &= mask[i]
++	}
++
++	expressions := []expr.Any{
++		&expr.Payload{
++			DestRegister: 1,
++			Base:         expr.PayloadBaseNetworkHeader,
++			Offset:       m.af.srcAddrOffset,
++			Len:          m.af.addrLen,
++		},
++		&expr.Bitwise{
++			SourceRegister: 1,
++			DestRegister:   1,
++			Len:            m.af.addrLen,
++			Mask:           mask,
++			Xor:            make([]byte, m.af.addrLen),
++		},
++		&expr.Cmp{
++			Op:       expr.CmpOpEq,
++			Register: 1,
++			Data:     addr,
++		},
++		&expr.Counter{},
++		&expr.Verdict{Kind: expr.VerdictAccept},
++	}
++
++	rule := m.rConn.AddRule(&nftables.Rule{
++		Table: m.workTable,
++		Chain: m.chainInputRules,
++		Exprs: expressions,
++	})
++
++	if err := m.rConn.Flush(); err != nil {
++		return fmt.Errorf("flush route input rule: %w", err)
++	}
++
++	m.routeInputRules[key] = rule
++	return nil
++}
++
++// RemoveRouteInputRule removes the ACCEPT rule for the given network prefix.
++func (m *AclManager) RemoveRouteInputRule(prefix netip.Prefix) error {
++	key := prefix.String()
++	rule, exists := m.routeInputRules[key]
++	if !exists {
++		return nil
++	}
++
++	if err := m.rConn.DelRule(rule); err != nil {
++		log.Errorf("failed to delete route input rule for %s: %v", key, err)
++	}
++
++	if err := m.rConn.Flush(); err != nil {
++		return fmt.Errorf("flush route input rule deletion: %w", err)
++	}
++
++	delete(m.routeInputRules, key)
++	return nil
++}
++
+ // Flush rule/chain/set operations from the buffer
+ //
+ // Method also get all rules after flush and refreshes handle values in the rulesets

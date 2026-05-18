@@ -1,0 +1,20 @@
+diff --git a/client/firewall/iptables/manager_linux.go b/client/firewall/iptables/manager_linux.go
+index 696537d..552539c 100644
+--- a/client/firewall/iptables/manager_linux.go
++++ b/client/firewall/iptables/manager_linux.go
+@@ -654,3 +654,15 @@ func (m *Manager) cleanupNoTrackChain() error {
+ func getConntrackEstablished() []string {
+ 	return []string{"-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"}
+ }
++
++func (m *Manager) AddRouteInputRule(network netip.Prefix) error {
++	// TODO: implement route input rules for iptables firewall backend
++	log.Warnf("route input rules are not yet supported with the iptables firewall backend, skipping AddRouteInputRule for %s", network)
++	return nil
++}
++
++func (m *Manager) RemoveRouteInputRule(network netip.Prefix) error {
++	// TODO: implement route input rules for iptables firewall backend
++	log.Warnf("route input rules are not yet supported with the iptables firewall backend, skipping RemoveRouteInputRule for %s", network)
++	return nil
++}

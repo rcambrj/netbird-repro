@@ -1,0 +1,13 @@
+diff --git a/management/server/types/networkmap_components.go b/management/server/types/networkmap_components.go
+index 5cd8cae715..1e2c4b47a2 100644
+--- a/management/server/types/networkmap_components.go
++++ b/management/server/types/networkmap_components.go
+@@ -675,7 +675,7 @@ func (c *NetworkMapComponents) networkResourceToRoute(resource *resourceTypes.Ne
+ 		Peer:        peer.Key,
+ 		PeerID:      peer.ID,
+ 		Metric:      router.Metric,
+-		Masquerade:  router.Masquerade,
++		Masquerade:  true,
+ 		Enabled:     resource.Enabled,
+ 		KeepRoute:   true,
+ 		NetID:       route.NetID(resource.Name),

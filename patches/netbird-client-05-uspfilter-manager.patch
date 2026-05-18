@@ -1,0 +1,24 @@
+diff --git a/client/firewall/uspfilter/filter.go b/client/firewall/uspfilter/filter.go
+index 91866dc..fff7f2d 100644
+--- a/client/firewall/uspfilter/filter.go
++++ b/client/firewall/uspfilter/filter.go
+@@ -1672,3 +1672,19 @@ func (m *Manager) hasMatchingNetstackService(d *decoder) bool {
+ 
+ 	return exists
+ }
++
++func (m *Manager) AddRouteInputRule(network netip.Prefix) error {
++	if m.nativeFirewall != nil {
++		return m.nativeFirewall.AddRouteInputRule(network)
++	}
++	// TODO: implement route input rules for pure userspace mode
++	return nil
++}
++
++func (m *Manager) RemoveRouteInputRule(network netip.Prefix) error {
++	if m.nativeFirewall != nil {
++		return m.nativeFirewall.RemoveRouteInputRule(network)
++	}
++	// TODO: implement route input rules for pure userspace mode
++	return nil
++}

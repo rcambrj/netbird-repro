@@ -1,0 +1,37 @@
+diff --git a/client/firewall/nftables/manager_linux.go b/client/firewall/nftables/manager_linux.go
+index fdc7c2f..5b6a037 100644
+--- a/client/firewall/nftables/manager_linux.go
++++ b/client/firewall/nftables/manager_linux.go
+@@ -847,6 +847,32 @@ func (m *Manager) refreshNoTrackChains() error {
+ 	return nil
+ }
+ 
++func (m *Manager) AddRouteInputRule(network netip.Prefix) error {
++	m.mutex.Lock()
++	defer m.mutex.Unlock()
++
++	if network.Addr().Is6() {
++		if !m.hasIPv6() {
++			return fmt.Errorf("add route input rule: %w", firewall.ErrIPv6NotInitialized)
++		}
++		return m.aclManager6.AddRouteInputRule(network)
++	}
++	return m.aclManager.AddRouteInputRule(network)
++}
++
++func (m *Manager) RemoveRouteInputRule(network netip.Prefix) error {
++	m.mutex.Lock()
++	defer m.mutex.Unlock()
++
++	if network.Addr().Is6() {
++		if !m.hasIPv6() {
++			return fmt.Errorf("remove route input rule: %w", firewall.ErrIPv6NotInitialized)
++		}
++		return m.aclManager6.RemoveRouteInputRule(network)
++	}
++	return m.aclManager.RemoveRouteInputRule(network)
++}
++
+ func (m *Manager) createWorkTable() (*nftables.Table, error) {
+ 	return m.createWorkTableFamily(nftables.TableFamilyIPv4)
+ }

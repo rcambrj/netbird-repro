@@ -1,0 +1,73 @@
+diff --git a/client/internal/acl/manager.go b/client/internal/acl/manager.go
+index c54a3e8..921b81c 100644
+--- a/client/internal/acl/manager.go
++++ b/client/internal/acl/manager.go
+@@ -34,6 +34,7 @@ type DefaultManager struct {
+ 	ipsetCounter   int
+ 	peerRulesPairs map[id.RuleID][]firewall.Rule
+ 	routeRules     map[id.RuleID]struct{}
++	routeInputNets map[netip.Prefix]struct{}
+ 	mutex          sync.Mutex
+ }
+ 
+@@ -42,6 +43,7 @@ func NewDefaultManager(fm firewall.Manager) *DefaultManager {
+ 		firewall:       fm,
+ 		peerRulesPairs: make(map[id.RuleID][]firewall.Rule),
+ 		routeRules:     make(map[id.RuleID]struct{}),
++		routeInputNets: make(map[netip.Prefix]struct{}),
+ 	}
+ }
+ 
+@@ -69,6 +71,7 @@ func (d *DefaultManager) ApplyFiltering(networkMap *mgmProto.NetworkMap, dnsRout
+ 	}()
+ 
+ 	d.applyPeerACLs(networkMap)
++	d.applyRouteInputRules(networkMap.Routes)
+ 
+ 	if err := d.applyRouteACLs(networkMap.RoutesFirewallRules, dnsRouteFeatureFlag); err != nil {
+ 		log.Errorf("Failed to apply route ACLs: %v", err)
+@@ -456,3 +459,44 @@ func getDefault(prefix netip.Prefix) netip.Prefix {
+ 	}
+ 	return netip.PrefixFrom(netip.IPv4Unspecified(), 0)
+ }
++
++// applyRouteInputRules adds INPUT chain ACCEPT rules for non-masqueraded route
++// networks. Without SNAT, traffic from these networks arrives with its original
++// source IP intact, which is not a known NetBird peer IP. The default INPUT chain
++// drops such traffic because it only allows known peer IPs. By adding ACCEPT rules
++// for non-masqueraded route networks, we allow site-to-VPN traffic to reach local
++// services on this peer without requiring SNAT.
++func (d *DefaultManager) applyRouteInputRules(routes []*mgmProto.Route) {
++	newNets := make(map[netip.Prefix]struct{})
++	for _, route := range routes {
++		if route.Masquerade {
++			continue
++		}
++		if len(route.Network) == 0 {
++			continue
++		}
++		prefix, err := netip.ParsePrefix(route.Network)
++		if err != nil {
++			log.Warnf("failed to parse route network %s for input rule: %v", route.Network, err)
++			continue
++		}
++		prefix = prefix.Masked()
++		if prefix.Bits() == 0 {
++			continue
++		}
++		newNets[prefix] = struct{}{}
++		if _, exists := d.routeInputNets[prefix]; !exists {
++			if err := d.firewall.AddRouteInputRule(prefix); err != nil {
++				log.Errorf("failed to add route input rule for %s: %v", prefix, err)
++			}
++		}
++	}
++	for prefix := range d.routeInputNets {
++		if _, exists := newNets[prefix]; !exists {
++			if err := d.firewall.RemoveRouteInputRule(prefix); err != nil {
++				log.Errorf("failed to remove route input rule for %s: %v", prefix, err)
++			}
++		}
++	}
++	d.routeInputNets = newNets
++}
