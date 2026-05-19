@@ -11,8 +11,8 @@ flowchart TD
 
 In this scenario:
 
-* ✅ sending an ICMP echo from `machine4` over the netbird network to `machine1` arrives and the reply does also.
-* ❌ sending an ICMP echo from `machine1` over the netbird network to `machine4` arrives, but `machine4` does not reply.
+* ✅ sending an ICMP echo from `machine3` over the netbird network to `machine1` arrives and the reply does also.
+* ❌ sending an ICMP echo from `machine1` over the netbird network to `machine3` arrives, but `machine3` does not reply.
 
 \* the netbird team have [documented](https://docs.netbird.io/manage/networks/use-cases/site-to-vpn) that:
   
@@ -45,8 +45,6 @@ Note: at the time of writing, the `netbird` package can be upgraded to the lates
 * `nix build -L .#packages.aarch64-darwin.netbird-repro-broken`
 * `nix build -L .#packages.aarch64-darwin.netbird-repro-dev`
 
-`netbird-repro` uses the default `nixpkgs` packages. The `netbird-repro-working` and `netbird-repro-broken` wrappers inject pinned `netbird` and `netbird-management` packages from the corresponding flake inputs.
-
 ## Repro targets
 
 `netbird-repro` uses the current default `nixpkgs` packages and follows whichever NetBird version is available there.
@@ -57,7 +55,7 @@ Note: at the time of writing, the `netbird` package can be upgraded to the lates
 
 `netbird-repro-dev` is the patch development target. It builds NetBird from the local package definitions in this repository and is the only repro target intended for local NetBird source patches.
 
-While iterating on a fix, add local `netbird-management` patches to `netbirdManagementPatches` in `packages/netbird-repro-dev.nix`, then run:
+While iterating on a fix, add local `netbird` & `netbird-management` patches to `netbirdPatches` & `netbirdManagementPatches` in `packages/netbird-repro-dev.nix`, then run:
 
 ```sh
 nix build -L .#packages.aarch64-darwin.netbird-repro-dev
